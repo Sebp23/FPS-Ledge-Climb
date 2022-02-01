@@ -4,12 +4,12 @@ using UnityEngine;
 
 public class FirstPersonController : MonoBehaviour
 {
-    public bool CanMove { get; private set; } = true;
-    private bool IsSprinting => canSprint && Input.GetKey(sprintKey);
+    public bool PlayerCanMove { get; private set; } = true;
+    private bool PlayerIsSprinting => playerCanSprint && Input.GetKey(sprintKey);
 
     [Header("Functional Options")]
     [SerializeField]
-    private bool canSprint = true;
+    private bool playerCanSprint = true;
 
     [Header("Controls")]
     [SerializeField]
@@ -54,7 +54,7 @@ public class FirstPersonController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (CanMove)
+        if (PlayerCanMove)
         {
             HandleMovementInput();
             HandleMouseLook();
@@ -66,8 +66,8 @@ public class FirstPersonController : MonoBehaviour
     private void HandleMovementInput()
     {
         //when the player presses W and S or A and D
-        currentInput = new Vector2((IsSprinting ?  sprintSpeed : walkSpeed) * Input.GetAxis("Vertical"), 
-            (IsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Horizontal"));
+        currentInput = new Vector2((PlayerIsSprinting ?  sprintSpeed : walkSpeed) * Input.GetAxis("Vertical"), 
+            (PlayerIsSprinting ? sprintSpeed : walkSpeed) * Input.GetAxis("Horizontal"));
 
         float moveDirectionY = moveDirection.y;
         moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) + (transform.TransformDirection(Vector3.right) * currentInput.y);
