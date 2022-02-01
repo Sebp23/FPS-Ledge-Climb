@@ -6,22 +6,25 @@ public class FirstPersonController : MonoBehaviour
 {
     public bool PlayerCanMove { get; private set; } = true;
     private bool PlayerIsSprinting => playerCanSprint && Input.GetKey(sprintKey);
+    private bool PlayerShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded;
 
     [Header("Functional Options")]
     [SerializeField]
     private bool playerCanSprint = true;
+    [SerializeField]
+    private bool playerCanJump = true;
 
     [Header("Controls")]
     [SerializeField]
     private KeyCode sprintKey = KeyCode.LeftShift;
+    [SerializeField]
+    private KeyCode jumpKey = KeyCode.Space;
 
     [Header("Movement Parameters")]
     [SerializeField]
-    private float walkSpeed = 3.0f;
+    private float walkSpeed = 3f;
     [SerializeField]
-    private float sprintSpeed = 6.0f;
-    [SerializeField]
-    private float gravity = 30f;
+    private float sprintSpeed = 6f;
 
     [Header("Look Parameters")]
     [SerializeField, Range(1, 10)]
@@ -32,6 +35,12 @@ public class FirstPersonController : MonoBehaviour
     private float upperLookLimit = 80f;
     [SerializeField, Range(1, 100)]
     private float lowerLookLimit = 80f;
+
+    [Header("Jumping Parameters")]
+    [SerializeField]
+    private float jumpForce = 8f;
+    [SerializeField]
+    private float gravity = 30f;
 
     private Camera playerCamera;
     private CharacterController characterController;
@@ -59,6 +68,11 @@ public class FirstPersonController : MonoBehaviour
             HandleMovementInput();
             HandleMouseLook();
 
+            if (playerCanJump)
+            {
+                HandleJump();
+            }
+
             ApplyFinalMovements();
         }
     }
@@ -81,6 +95,14 @@ public class FirstPersonController : MonoBehaviour
         rotationX = Mathf.Clamp(rotationX, -upperLookLimit, lowerLookLimit); //clamp camera
         playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
         transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeedX, 0);
+    }
+
+    private void HandleJump()
+    {
+        if (PlayerShouldJump)
+        {
+            moveDirection.y = jumpForce;
+        }
     }
 
     private void ApplyFinalMovements()
