@@ -2907,6 +2907,9 @@ MonoBehaviour:
   walkSpeed: 3
   sprintSpeed: 6
   crouchSpeed: 1.5
+  fovDefault: 60
+  fovSprint: 80
+  fovIncrement: 10
   lookSpeedX: 2
   lookSpeedY: 2
   upperLookLimit: 80

@@ -37,6 +37,12 @@ public class FirstPersonController : MonoBehaviour
     private float sprintSpeed = 6f;
     [SerializeField]
     private float crouchSpeed = 1.5f;
+    [SerializeField]
+    private float fovDefault = 60f;
+    [SerializeField]
+    private float fovSprint = 70f;
+    [SerializeField]
+    private float fovIncrement = 5f;
 
     //Parameters for looking around with mouse
     [Header("Look Parameters")]
@@ -87,6 +93,8 @@ public class FirstPersonController : MonoBehaviour
         //Lock and hide cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        playerCamera.fieldOfView = fovDefault;
     }
 
     // Update is called once per frame
@@ -114,6 +122,19 @@ public class FirstPersonController : MonoBehaviour
 
     private void HandleMovementInput()
     {
+        if (PlayerIsSprinting && playerCamera.fieldOfView < fovSprint)
+        {
+            playerCamera.fieldOfView += fovIncrement * Time.deltaTime;
+        }
+        else if (!PlayerIsSprinting && playerCamera.fieldOfView > fovDefault)
+        {
+            playerCamera.fieldOfView -= fovIncrement * Time.deltaTime;
+        }
+        //else
+        //{
+        //    playerCamera.fieldOfView = fovDefault;
+        //}
+
         //when the player presses W and S or A and D
         //Check to see what speed they are going, based on whether they are crouching, sprinting, or simply walking
         currentInput = new Vector2((playerIsCrouching ? crouchSpeed : PlayerIsSprinting ?  sprintSpeed : walkSpeed) * Input.GetAxis("Vertical"), 
