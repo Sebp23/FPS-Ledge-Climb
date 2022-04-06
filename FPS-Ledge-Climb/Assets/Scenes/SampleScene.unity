@@ -2901,6 +2901,7 @@ MonoBehaviour:
   playerCanSprint: 1
   playerCanJump: 1
   playerCanCrouch: 1
+  playerCanHeadbob: 1
   sprintKey: 304
   jumpKey: 32
   crouchKey: 306
@@ -2908,8 +2909,8 @@ MonoBehaviour:
   sprintSpeed: 6
   crouchSpeed: 1.5
   fovDefault: 60
-  fovSprint: 80
-  fovIncrement: 10
+  fovSprint: 70
+  fovIncrement: 100
   lookSpeedX: 2
   lookSpeedY: 2
   upperLookLimit: 80
@@ -2921,3 +2922,9 @@ MonoBehaviour:
   timeToCrouch: 0.25
   crouchingCenter: {x: 0, y: 0.5, z: 0}
   standingCenter: {x: 0, y: 0, z: 0}
+  walkBobSpeed: 14
+  walkBobAmount: 0.05
+  sprintBobSpeed: 18
+  sprintBobAmount: 0.1
+  crouchBobSpeed: 8
+  crouchBobAmount: 0.025

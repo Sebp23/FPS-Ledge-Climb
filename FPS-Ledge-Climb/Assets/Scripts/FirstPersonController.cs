@@ -7,8 +7,8 @@ public class FirstPersonController : MonoBehaviour
     //properties used to help check whether player can use certain mechanics. These are mostly to keep the code clean and organized
     //Kind of a rudimentary/crude state machine
     public bool PlayerCanMove { get; private set; } = true;
-    private bool PlayerIsSprinting => playerCanSprint && Input.GetKey(sprintKey);
-    private bool PlayerShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded;
+    private bool PlayerIsSprinting => playerCanSprint && Input.GetKey(sprintKey) && !playerIsCrouching;
+    private bool PlayerShouldJump => Input.GetKeyDown(jumpKey) && characterController.isGrounded && !playerIsCrouching;
     private bool PlayerShouldCrouch => Input.GetKeyDown(crouchKey) && !playerInCrouchAnimation && characterController.isGrounded;
 
     //Checks used to see if player is able to use mechanics.
@@ -19,6 +19,8 @@ public class FirstPersonController : MonoBehaviour
     private bool playerCanJump = true;
     [SerializeField]
     private bool playerCanCrouch = true;
+    [SerializeField]
+    private bool playerCanHeadbob = true;
 
     //The keys that players must press to use mechanics/actions
     [Header("Controls")]
@@ -77,6 +79,22 @@ public class FirstPersonController : MonoBehaviour
     private bool playerIsCrouching; //Is the player currently crouched?
     private bool playerInCrouchAnimation; //Is the player currently in the middle of the crouching animation?
 
+    [Header("Headbob Parameters")]
+    [SerializeField]
+    private float walkBobSpeed = 14f;
+    [SerializeField]
+    private float walkBobAmount = 0.05f;
+    [SerializeField]
+    private float sprintBobSpeed = 18f;
+    [SerializeField]
+    private float sprintBobAmount = 0.1f;
+    [SerializeField]
+    private float crouchBobSpeed = 8f;
+    [SerializeField]
+    private float crouchBobAmount = 0.025f;
+    private float defaultYPosCamera = 0;
+    private float timer; 
+
     private Camera playerCamera;
     private CharacterController characterController;
 
@@ -89,6 +107,8 @@ public class FirstPersonController : MonoBehaviour
     {
         playerCamera = GetComponentInChildren<Camera>();
         characterController = GetComponent<CharacterController>();
+
+        defaultYPosCamera = playerCamera.transform.localPosition.y;
 
         //Lock and hide cursor
         Cursor.lockState = CursorLockMode.Locked;
@@ -113,6 +133,11 @@ public class FirstPersonController : MonoBehaviour
             if (playerCanCrouch)
             {
                 HandleCrouch();
+            }
+
+            if (playerCanHeadbob)
+            {
+                HandleHeadbob();
             }
 
             //Apply all the movement parameters that are found earlier in the frame (above in Update())
@@ -171,6 +196,23 @@ public class FirstPersonController : MonoBehaviour
         if (PlayerShouldCrouch)
         {
             StartCoroutine(CrouchStand());
+        }
+    }
+
+    private void HandleHeadbob()
+    {
+        if (!characterController.isGrounded)
+        {
+            return;
+        }
+
+        if (Mathf.Abs(moveDirection.x) > 0.1f || Mathf.Abs(moveDirection.z) > 0.1f)
+        {
+            timer += Time.deltaTime * (playerIsCrouching ? crouchBobSpeed : PlayerIsSprinting ? sprintBobSpeed : walkBobSpeed);
+            playerCamera.transform.localPosition = new Vector3(
+                playerCamera.transform.localPosition.x,
+                defaultYPosCamera + Mathf.Sin(timer) * (playerIsCrouching ? crouchBobAmount : PlayerIsSprinting ? sprintBobAmount : walkBobAmount),
+                playerCamera.transform.localPosition.z);
         }
     }
 
