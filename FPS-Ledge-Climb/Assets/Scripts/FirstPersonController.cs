@@ -13,6 +13,9 @@ public class FirstPersonController : MonoBehaviour
 
     //Checks used to see if player is able to use mechanics.
     [Header("Functional Options")]
+    [Tooltip("Is the player in the middle of a special movement, i.e. ladder climbing?")]
+    [SerializeField]
+    public bool playerOnSpecialMovement = false;
     [SerializeField]
     private bool playerCanSprint = true;
     [SerializeField]
@@ -120,29 +123,37 @@ public class FirstPersonController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (PlayerCanMove)
+        if (!playerOnSpecialMovement)
         {
-            HandleMovementInput();
-            HandleMouseLook();
-
-            if (playerCanJump)
+            if (PlayerCanMove)
             {
-                HandleJump();
-            }
+                HandleMovementInput();
+                HandleMouseLook();
 
-            if (playerCanCrouch)
-            {
-                HandleCrouch();
-            }
+                if (playerCanJump)
+                {
+                    HandleJump();
+                }
 
-            if (playerCanHeadbob)
-            {
-                HandleHeadbob();
-            }
+                if (playerCanCrouch)
+                {
+                    HandleCrouch();
+                }
 
-            //Apply all the movement parameters that are found earlier in the frame (above in Update())
-            ApplyFinalMovements();
+                if (playerCanHeadbob)
+                {
+                    HandleHeadbob();
+                }
+
+                //Apply all the movement parameters that are found earlier in the frame (above in Update())
+                ApplyFinalMovements();
+            }
         }
+        else if (playerOnSpecialMovement)
+        {
+            HandleMouseLook();
+        }
+
     }
 
     private void HandleMovementInput()
