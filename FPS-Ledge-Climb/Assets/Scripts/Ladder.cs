@@ -11,7 +11,7 @@ public class Ladder : MonoBehaviour
     [SerializeField]
     private Transform groundTransform;
     
-    private bool inside = false;
+    public bool inside = false;
 
 
     [SerializeField]
@@ -35,7 +35,7 @@ public class Ladder : MonoBehaviour
         if (col.gameObject.tag == "Ladder")
         {
             firstPersonController.playerOnSpecialMovement = true;
-            inside = true;
+            //inside = true;
         }
     }
 
@@ -56,7 +56,7 @@ public class Ladder : MonoBehaviour
         if (col.gameObject.tag == "Ladder")
         {
             firstPersonController.playerOnSpecialMovement = false;
-            inside = true;
+            //inside = false;
         }
     }
 
