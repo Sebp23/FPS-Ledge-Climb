@@ -242,7 +242,7 @@ public class FirstPersonController : MonoBehaviour
         //The direction in which the player moves based on input
         float moveDirectionY = moveDirection.y;
         moveDirection = (transform.TransformDirection(Vector3.right) * MoveInput.x) + (transform.TransformDirection(Vector3.forward) * MoveInput.y);
-        moveDirection.y = moveDirectionY;
+        moveDirection.y = 0;//moveDirectionY;
 
         while (Time.time < startTime + dashTime)
         {
@@ -305,7 +305,7 @@ public class FirstPersonController : MonoBehaviour
         HandleHeadbob();
         AdaptFOV();
         //make sure the player is on the ground if applying gravity (after pressing Jump)
-        if (!characterController.isGrounded)
+        if (!characterController.isGrounded && !playerDashing)
         {
             moveDirection.y -= gravity * Time.deltaTime;
         }
