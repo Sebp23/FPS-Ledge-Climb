@@ -31,6 +31,8 @@ public class FirstPersonController : MonoBehaviour
     [Header("Movement Parameters")]
     [SerializeField]
     private float walkSpeed = 3f;
+    [SerializeField]
+    private float wallRunSpeed = 6f;
     //[SerializeField]
     //private float sprintSpeed = 6f;
     //[SerializeField]
@@ -59,6 +61,21 @@ public class FirstPersonController : MonoBehaviour
     private float jumpForce = 8f;
     [SerializeField]
     private float gravity = 30f;
+
+    [Header("Wallrunning Parameters")]
+    [SerializeField] private LayerMask whatIsWall;
+    [SerializeField] private LayerMask whatIsGround;
+    [SerializeField] private float wallRunForce;
+    [SerializeField] private float maxWallRunTime;
+    [SerializeField] private float wallCheckDistance;
+    [SerializeField] private float minJumpHeight;
+    [SerializeField] private Transform orientation;
+    private RaycastHit leftWallHit;
+    private RaycastHit rightWallHit;
+    private bool wallLeft;
+    private bool wallRight;
+    private float wallRunTimer;
+    private float verticalInput;
 
     //KEEPING THIS INCASE WE WANT TO ADD CROUCHING
     //Parameters for crouching. The height and center will directly affect the CharacterController height and center.
@@ -98,9 +115,14 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField]
     private float dashTime;
 
+    [Header("State bools")]
+    public bool basicMovement;
+    public bool wallRunning;
+
     private Camera playerCamera;
     private CharacterController characterController;
     private Rigidbody playerRB;
+    private Gun playerGun;
 
     private Vector3 moveDirection;
     private Vector2 currentInput; //Whether player is moving vertically or horizontally along x and z planes
@@ -112,13 +134,22 @@ public class FirstPersonController : MonoBehaviour
     private bool playerIsSprinting;
     private bool playerDashing;
 
-    private InputActions _input;
+    public static InputActions _input;
+
+    private MovementState state;
+
+    public enum MovementState
+    {
+        basic,
+        wallrunning
+    }
     
     void Awake()
     {
         playerCamera = GetComponentInChildren<Camera>();
         characterController = GetComponent<CharacterController>();
         playerRB = GetComponent<Rigidbody>();
+        playerGun = GetComponentInChildren<Gun>();
 
         defaultYPosCamera = playerCamera.transform.localPosition.y;
 
@@ -127,6 +158,10 @@ public class FirstPersonController : MonoBehaviour
         Cursor.visible = false;
 
         playerCamera.fieldOfView = fovDefault;
+
+        _input = new InputActions();
+
+        state = MovementState.basic;
     }
 
     // Update is called once per frame
@@ -145,7 +180,8 @@ public class FirstPersonController : MonoBehaviour
                 //}
 
                 //Apply all the movement parameters that are found earlier in the frame (above in Update())
-                ApplyFinalMovements();
+                CheckForWall();
+                StateHandler();
             }
         }
         else if (playerOnSpecialMovement)
@@ -158,33 +194,62 @@ public class FirstPersonController : MonoBehaviour
     private void OnEnable()
     {
         //Subscribe methods to the input actions
-        _input = new InputActions();
-        _input.HumanoidLand.Enable();
+        _input.Enable();
 
+        //HumanoidLand
         _input.HumanoidLand.Walk.performed += HandleWalkInput;
         _input.HumanoidLand.Walk.canceled += HandleWalkInput;
-
         _input.HumanoidLand.Dash.performed += HandleDashInput;
-
         _input.HumanoidLand.Jump.performed += HandleJump;
-
         _input.HumanoidLand.Restart.performed += ReloadScene;
+
+        //HumanoidWall
+        _input.HumanoidWall.Forward.performed += HandleWallrunInput;
+        _input.HumanoidWall.Forward.canceled += HandleWallrunInput;
+
+        //Gun
+        _input.Gun.Shoot.performed += playerGun.Shoot;
     }
 
     private void OnDisable()
     {
         //Unsubscribe methods from the input actions
+        _input.Disable();
+
+        //HumanoidLand
         _input.HumanoidLand.Walk.performed -= HandleWalkInput;
         _input.HumanoidLand.Walk.canceled -= HandleWalkInput;
-
         _input.HumanoidLand.Dash.performed -= HandleDashInput;
-
         _input.HumanoidLand.Jump.performed -= HandleJump;
-
         _input.HumanoidLand.Restart.performed -= ReloadScene;
 
+        //HumanoidWall
+        _input.HumanoidWall.Forward.performed -= HandleWallrunInput;
+        _input.HumanoidWall.Forward.canceled -= HandleWallrunInput;
 
-        _input.HumanoidLand.Disable();
+        //Gun
+        _input.Gun.Shoot.performed -= playerGun.Shoot;
+    }
+
+    private void StateHandler()
+    {
+        // Mode - Basic Movement
+        if (state == MovementState.basic)
+        {
+            //state = MovementState.basic;
+            _input.HumanoidWall.Disable();
+            _input.HumanoidLand.Enable();
+            ApplyFinalBasicMovements();
+        }
+
+        // Mode - Wallrunning
+        if (state == MovementState.wallrunning)
+        {
+            //state = MovementState.wallrunning;
+            _input.HumanoidLand.Disable();
+            _input.HumanoidWall.Enable();
+            ApplyFinalWallrunMovements();
+        }
     }
 
     private void ReloadScene(InputAction.CallbackContext context)
@@ -235,6 +300,7 @@ public class FirstPersonController : MonoBehaviour
         }
     }
 
+
     private IEnumerator Dash()
     {
         float startTime = Time.time;
@@ -270,6 +336,7 @@ public class FirstPersonController : MonoBehaviour
         if (characterController.isGrounded)
         {
             moveDirection.y = jumpForce;
+            //wallrunController.CheckForWall(); //TODO uncomment this (don't forget you silly bastard)
         }
     }
 
@@ -285,7 +352,7 @@ public class FirstPersonController : MonoBehaviour
 
     private void HandleHeadbob()
     {
-        if (!characterController.isGrounded)
+        if (!characterController.isGrounded && state == MovementState.basic)
         {
             return;
         }
@@ -300,7 +367,7 @@ public class FirstPersonController : MonoBehaviour
         }
     }
 
-    private void ApplyFinalMovements()
+    private void ApplyFinalBasicMovements()
     {
         HandleHeadbob();
         AdaptFOV();
@@ -319,6 +386,54 @@ public class FirstPersonController : MonoBehaviour
         characterController.Move(moveDirection * Time.deltaTime);
     }
 
+    private void CheckForWall()
+    {
+        //Parameters in order: start point, direction, store hit info, distance, layermask
+        wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
+        wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
+
+        verticalInput = Input.GetAxisRaw("Vertical");
+
+        //State 1 - Wallrunning
+        if ((wallLeft || wallRight) && verticalInput > 0 && !characterController.isGrounded)
+        {
+            if (state != MovementState.wallrunning)
+            {
+                state = MovementState.wallrunning;
+            }
+        }
+        else
+        {
+            if (state == MovementState.wallrunning)
+            {
+                state = MovementState.basic;
+            }
+        }
+    }
+
+    private void HandleWallrunInput(InputAction.CallbackContext context)
+    {
+        currentInput = (context.ReadValue<Vector2>());
+        MoveInput = new Vector2(currentInput.x * wallRunSpeed, currentInput.y * wallRunSpeed);
+    }
+
+    private void ApplyFinalWallrunMovements()
+    {
+        HandleHeadbob();
+        AdaptFOV();
+
+        Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+
+        Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
+
+        //The direction in which the player moves based on input
+        float moveDirectionY = moveDirection.y;
+        moveDirection = (transform.TransformDirection(wallForward) * MoveInput.x) + (transform.TransformDirection(Vector3.forward) * MoveInput.y);
+        moveDirection.y = 0;
+
+        //move the player based on the parameters gathered in the "Handle-" functions
+        characterController.Move(moveDirection * Time.deltaTime);
+    }
 
     //KEEPING THIS INCASE WE WANT TO ADD CROUCHING
     //Coroutine that handles crouching/standing
